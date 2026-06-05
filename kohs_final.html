@@ -1,0 +1,798 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KOHS 立方体テスト</title>
+<style>
+  :root {
+    --bg: #f7f6f3; --surface: #ffffff; --surface2: #f0efe9;
+    --border: rgba(0,0,0,0.1); --border2: rgba(0,0,0,0.18);
+    --text: #1a1a18; --text2: #6b6b65; --text3: #9e9e97;
+    --accent: #1a1a18;
+    --green: #1a6b3a; --green-bg: #e8f5ee;
+    --red: #b03030; --red-bg: #fdecea;
+    --amber: #8a5a00; --amber-bg: #fef3dc;
+    --radius: 10px; --radius-lg: 14px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Hiragino Kaku Gothic ProN','Yu Gothic',sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+  .container { max-width: 560px; margin: 0 auto; padding: 1.5rem 1rem 4rem; }
+
+  /* ===== スタート画面 ===== */
+  #screen-start { display: block; }
+  #screen-main  { display: none; }
+  #screen-result{ display: none; }
+
+  .start-header { text-align: center; margin-bottom: 2rem; padding-top: 1rem; }
+  .start-title  { font-size: 24px; font-weight: 700; letter-spacing: -0.5px; margin-bottom: 4px; }
+  .start-sub    { font-size: 14px; color: var(--text2); }
+
+  .field-card   { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1.25rem; margin-bottom: 1rem; }
+  .field-label  { font-size: 11px; font-weight: 700; letter-spacing: 0.5px; color: var(--text3); text-transform: uppercase; margin-bottom: 0.75rem; }
+  .field-input  {
+    width: 100%; padding: 10px 12px; font-size: 16px; font-weight: 500;
+    border: 1.5px solid var(--border2); border-radius: var(--radius);
+    background: var(--surface); color: var(--text);
+  }
+  .field-input:focus { outline: 2px solid var(--accent); border-color: var(--accent); }
+  .field-row    { display: flex; gap: 10px; }
+  .field-row .field-input { flex: 1; }
+  .field-hint   { font-size: 12px; color: var(--text3); margin-top: 6px; }
+
+  .start-btn {
+    width: 100%; padding: 14px; font-size: 16px; font-weight: 700;
+    background: var(--accent); color: #fff; border: none;
+    border-radius: var(--radius-lg); cursor: pointer; margin-top: 0.5rem;
+    letter-spacing: 0.5px; transition: opacity 0.15s;
+  }
+  .start-btn:hover { opacity: 0.85; }
+
+  .hist-section { margin-top: 2rem; }
+  .hist-section-label { font-size: 13px; font-weight: 700; color: var(--text2); margin-bottom: 0.75rem; }
+  .hist-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 12px; border-radius: var(--radius);
+    border: 1px solid var(--border); background: var(--surface);
+    margin-bottom: 6px; cursor: pointer; transition: background 0.12s;
+  }
+  .hist-row:hover { background: var(--surface2); }
+  .hist-row-active { border-color: var(--accent); background: var(--amber-bg); }
+  .del-btn {
+    padding: 4px 10px; font-size: 12px; font-weight: 600;
+    border: 1px solid var(--border2); border-radius: 6px;
+    background: transparent; cursor: pointer; color: var(--red); flex-shrink: 0;
+  }
+  .del-btn:hover { background: var(--red-bg); }
+
+  /* ===== メイン画面 ===== */
+  .app-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.75rem; }
+  .app-title  { font-size: 18px; font-weight: 700; letter-spacing: -0.3px; }
+  .patient-chip { font-size: 12px; font-weight: 600; color: var(--text2); background: var(--surface2); border-radius: 20px; padding: 4px 12px; }
+  .total-chip { font-size: 13px; font-weight: 600; background: var(--accent); color: #fff; border-radius: 20px; padding: 4px 14px; }
+
+  .top-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; }
+
+  .prob-nav { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 1.25rem; }
+  .pnav-btn {
+    width: 34px; height: 34px; border-radius: 50%;
+    border: 1.5px solid var(--border2); background: var(--surface);
+    font-size: 12px; font-weight: 600; cursor: pointer; color: var(--text2);
+    display: flex; align-items: center; justify-content: center; transition: all 0.15s;
+  }
+  .pnav-btn.cur  { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .pnav-btn.done { background: var(--surface2); color: var(--text); border-color: var(--border); }
+
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1.25rem; margin-bottom: 1rem; }
+  .card-label { font-size: 11px; font-weight: 700; letter-spacing: 0.5px; color: var(--text3); text-transform: uppercase; margin-bottom: 0.75rem; }
+
+  .prob-info-row { display: flex; align-items: baseline; gap: 12px; margin-bottom: 0.25rem; }
+  .prob-big { font-size: 32px; font-weight: 700; letter-spacing: -1px; }
+  .prob-sub { font-size: 14px; color: var(--text2); }
+
+  .sw-display {
+    font-size: 56px; font-weight: 300; font-variant-numeric: tabular-nums;
+    letter-spacing: 2px; text-align: center; color: var(--text); margin-bottom: 1rem; transition: color 0.2s;
+  }
+  .sw-display.running { color: var(--green); }
+  .sw-display.over    { color: var(--red); }
+
+  .sw-btns { display: flex; gap: 8px; }
+  .sw-btn {
+    flex: 1; padding: 12px; font-size: 14px; font-weight: 600;
+    border: 1.5px solid var(--border2); border-radius: var(--radius);
+    background: transparent; cursor: pointer; color: var(--text);
+    display: flex; align-items: center; justify-content: center; gap: 6px; transition: background 0.12s;
+  }
+  .sw-btn:hover { background: var(--surface2); }
+  .sw-btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .sw-btn.primary:hover { opacity: 0.88; }
+  .sw-btn svg { width: 16px; height: 16px; flex-shrink: 0; }
+
+  .score-rows { display: flex; flex-direction: column; gap: 4px; }
+  .score-row {
+    display: flex; align-items: center; gap: 8px;
+    padding: 6px 10px; border-radius: 8px; border: 1px solid transparent; transition: background 0.15s;
+  }
+  .score-row.active-range { background: var(--amber-bg); border-color: rgba(138,90,0,0.2); }
+  .score-row-pts   { font-size: 18px; font-weight: 700; color: var(--text); width: 32px; text-align: right; flex-shrink: 0; }
+  .score-row-label { font-size: 12px; color: var(--text2); flex: 1; }
+  .score-row-badge { font-size: 11px; font-weight: 700; background: var(--amber); color: #fff; border-radius: 6px; padding: 2px 8px; flex-shrink: 0; }
+
+  .score-grid { display: grid; gap: 6px; }
+  .sc-btn {
+    padding: 14px 6px; text-align: center;
+    border: 1.5px solid var(--border2); border-radius: var(--radius);
+    cursor: pointer; background: var(--surface);
+    font-size: 20px; font-weight: 700; color: var(--text2); transition: all 0.12s;
+  }
+  .sc-btn:hover { background: var(--surface2); color: var(--text); }
+  .sc-btn.sel { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+  .nav-row { display: flex; gap: 8px; margin-top: 1rem; }
+  .nav-btn {
+    flex: 1; padding: 12px; font-size: 14px; font-weight: 600;
+    border: 1.5px solid var(--border2); border-radius: var(--radius);
+    background: var(--surface); cursor: pointer; color: var(--text);
+    display: flex; align-items: center; justify-content: center; gap: 6px; transition: background 0.12s;
+  }
+  .nav-btn:hover { background: var(--surface2); }
+  .nav-btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .nav-btn.primary:hover { opacity: 0.88; }
+  .nav-btn svg { width: 16px; height: 16px; }
+
+  .footer-total {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 1rem 1.25rem; background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius-lg); margin-top: 0.5rem; margin-bottom: 1rem;
+  }
+  .footer-label { font-size: 13px; color: var(--text2); font-weight: 600; }
+  .footer-val   { font-size: 24px; font-weight: 700; }
+
+  /* 2連続0点バナー */
+  .zero-warn {
+    display: none; background: var(--red-bg); border: 1px solid rgba(176,48,48,0.25);
+    border-radius: var(--radius); padding: 10px 14px; margin-bottom: 1rem;
+    font-size: 13px; font-weight: 600; color: var(--red); text-align: center;
+  }
+  .zero-warn.show { display: block; }
+
+  /* ===== 結果画面 ===== */
+  .result-header { text-align: center; margin-bottom: 1.5rem; padding-top: 0.5rem; }
+  .result-title  { font-size: 22px; font-weight: 700; margin-bottom: 4px; }
+  .result-sub    { font-size: 13px; color: var(--text2); }
+  .result-score-big {
+    font-size: 72px; font-weight: 700; letter-spacing: -2px; text-align: center;
+    line-height: 1; margin: 1rem 0 0.25rem;
+  }
+  .result-score-label { font-size: 13px; color: var(--text2); text-align: center; margin-bottom: 1.5rem; }
+
+  .prob-summary { display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; margin-bottom: 1rem; }
+  .ps-cell {
+    text-align: center; padding: 6px 2px; border-radius: 8px;
+    border: 1px solid var(--border); background: var(--surface);
+  }
+  .ps-num  { font-size: 10px; color: var(--text3); }
+  .ps-val  { font-size: 14px; font-weight: 700; }
+  .ps-cell.zero { background: var(--red-bg); }
+  .ps-cell.skip { background: var(--surface2); opacity: 0.5; }
+
+  .age-row  { display: flex; align-items: center; gap: 10px; margin-bottom: 1rem; }
+  .age-row label { font-size: 13px; color: var(--text2); font-weight: 600; white-space: nowrap; }
+  .age-input {
+    width: 80px; padding: 8px 10px; font-size: 16px; font-weight: 600;
+    border: 1.5px solid var(--border2); border-radius: var(--radius);
+    background: var(--surface); color: var(--text); text-align: center;
+  }
+  .age-input:focus { outline: 2px solid var(--accent); border-color: var(--accent); }
+  .age-hint { font-size: 12px; color: var(--text3); }
+
+  .norm-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 0.875rem; }
+  .norm-table th { font-size: 11px; font-weight: 700; color: var(--text3); text-align: center; padding: 5px 6px; border-bottom: 1.5px solid var(--border2); }
+  .norm-table th.left { text-align: left; }
+  .norm-table td { padding: 7px 8px; text-align: center; border-bottom: 1px solid var(--border); color: var(--text2); }
+  .norm-table td.left { text-align: left; }
+  .norm-table tr.highlight td { background: var(--amber-bg); color: var(--text); font-weight: 700; }
+  .norm-table tr:last-child td { border-bottom: none; }
+
+  .norm-result {
+    padding: 12px 14px; border-radius: var(--radius); border: 1px solid transparent;
+    font-size: 14px; line-height: 1.6; display: none;
+  }
+  .norm-result.show     { display: block; }
+  .norm-result.above    { background: var(--green-bg); border-color: rgba(26,107,58,0.25); color: var(--green); }
+  .norm-result.within   { background: var(--amber-bg); border-color: rgba(138,90,0,0.2);  color: var(--amber); }
+  .norm-result.below    { background: var(--red-bg);   border-color: rgba(176,48,48,0.2); color: var(--red); }
+  .norm-result.no-group { background: var(--surface2); border-color: var(--border);        color: var(--text2); }
+
+  .save-btn {
+    width: 100%; padding: 11px; font-size: 14px; font-weight: 600;
+    background: var(--accent); color: #fff; border: none;
+    border-radius: var(--radius); cursor: pointer; margin-bottom: 1rem; transition: opacity 0.15s;
+  }
+  .save-btn:hover { opacity: 0.85; }
+
+  .back-btn {
+    width: 100%; padding: 12px; font-size: 14px; font-weight: 600;
+    background: var(--surface); color: var(--text); border: 1.5px solid var(--border2);
+    border-radius: var(--radius-lg); cursor: pointer; margin-top: 0.5rem; transition: background 0.12s;
+  }
+  .back-btn:hover { background: var(--surface2); }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- ===== スタート画面 ===== -->
+  <div id="screen-start">
+    <div class="start-header">
+      <div class="start-title">KOHS 立方体テスト</div>
+      <div class="start-sub">イニシャルを入力して検査を開始してください</div>
+    </div>
+
+    <div class="field-card">
+      <div class="field-label">受検者</div>
+      <div class="field-row">
+        <input class="field-input" id="inp-initial" type="text" placeholder="イニシャル（例：YT）" style="max-width:160px">
+        <input class="field-input" id="inp-age-start" type="number" min="1" max="120" placeholder="年齢（歳）">
+      </div>
+      <div class="field-hint">イニシャルを入力して開始してください</div>
+    </div>
+
+    <button class="start-btn" onclick="startExam()">検査を開始する →</button>
+
+    <!-- 過去の記録 -->
+    <div class="hist-section">
+      <div class="hist-section-label">保存済みの検査記録</div>
+      <div id="start-hist-wrap"></div>
+    </div>
+  </div>
+
+  <!-- ===== メイン検査画面 ===== -->
+  <div id="screen-main">
+    <div class="top-row">
+      <div>
+        <div class="app-title">KOHS 立方体テスト</div>
+        <div id="patient-disp" style="font-size:13px;color:var(--text2);margin-top:2px"></div>
+      </div>
+      <div class="total-chip">合計 <span id="total-disp">0</span> 点</div>
+    </div>
+
+    <div class="prob-nav" id="prob-nav"></div>
+
+    <!-- 2連続0点警告 -->
+    <div class="zero-warn" id="zero-warn">
+      ⚠️ 2問連続で0点です。検査を終了して集計に移ります
+    </div>
+
+    <div class="card">
+      <div class="card-label">問題 <span id="prob-num-label">1</span></div>
+      <div class="prob-info-row">
+        <div class="prob-big" id="prob-big">1</div>
+        <div class="prob-sub" id="prob-sub"></div>
+      </div>
+      <div class="sw-display" id="sw-disp">0:00</div>
+      <div class="sw-btns">
+        <button class="sw-btn primary" id="sw-main-btn" onclick="swToggle()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5,3 19,12 5,21"/></svg>
+          <span>開始</span>
+        </button>
+        <button class="sw-btn" onclick="swReset()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+          リセット
+        </button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-label">採点の目安（現在の経過時間）</div>
+      <div class="score-rows" id="score-rows"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-label">得点を入力</div>
+      <div class="score-grid" id="score-grid"></div>
+    </div>
+
+    <div class="nav-row">
+      <button class="nav-btn" id="btn-prev" onclick="mv(-1)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15,18 9,12 15,6"/></svg>
+        前へ
+      </button>
+      <button class="nav-btn primary" id="btn-next" onclick="mvNext()">
+        次へ
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9,18 15,12 9,6"/></svg>
+      </button>
+    </div>
+
+    <div class="footer-total">
+      <div class="footer-label">合計得点</div>
+      <div class="footer-val"><span id="total-disp2">0</span> 点</div>
+    </div>
+
+    <button class="back-btn" onclick="goToResult()">集計結果を見る →</button>
+  </div>
+
+  <!-- ===== 集計結果画面 ===== -->
+  <div id="screen-result">
+    <div class="result-header">
+      <div class="result-title">集計結果</div>
+      <div class="result-sub" id="result-patient-sub"></div>
+    </div>
+
+    <div class="result-score-big" id="result-score-big">0</div>
+    <div class="result-score-label">合計得点</div>
+
+    <div class="card">
+      <div class="card-label">問題別得点</div>
+      <div class="prob-summary" id="prob-summary"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-label">年齢別規準との比較（柄沢昭秀 他, 1980）</div>
+      <div class="age-row">
+        <label for="age-input">年齢</label>
+        <input class="age-input" id="age-input" type="number" min="60" max="120" placeholder="例: 72" oninput="renderNorm()">
+        <span class="age-hint">歳（60〜80代に対応）</span>
+      </div>
+      <table class="norm-table">
+        <thead>
+          <tr>
+            <th class="left">年代</th>
+            <th>例数<br><small style="font-weight:400">健康群</small></th>
+            <th>平均±SD<br><small style="font-weight:400">健康群</small></th>
+            <th>例数<br><small style="font-weight:400">優秀群</small></th>
+            <th>平均±SD<br><small style="font-weight:400">優秀群</small></th>
+          </tr>
+        </thead>
+        <tbody id="norm-tbody"></tbody>
+      </table>
+      <div class="norm-result" id="norm-result"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-label">検査記録を保存</div>
+      <button class="save-btn" id="save-btn" onclick="saveToStorage()">この結果を保存する</button>
+      <div class="card-label" style="margin-bottom:0.5rem">過去の記録（タップで読み込み）</div>
+      <div id="result-hist-wrap"></div>
+    </div>
+
+    <button class="back-btn" onclick="goToMain()">← 検査画面に戻る</button>
+    <button class="back-btn" style="margin-top:8px" onclick="goToStart()">← スタート画面に戻る</button>
+  </div>
+
+</div><!-- /container -->
+
+<script>
+function ms(m, s) { return m * 60 + s; }
+
+const PROBS = [
+  { n:1,  tl:ms(1,30), bands:[{to:ms(0,20),pts:3,label:'20秒以内'},{to:ms(1,30),pts:2,label:'21秒〜1分30秒'},{to:Infinity,pts:0,label:'制限超過'}]},
+  { n:2,  tl:ms(1,30), bands:[{to:ms(0,30),pts:5,label:'30秒以内'},{to:ms(1,30),pts:4,label:'31秒〜1分30秒'},{to:Infinity,pts:0,label:'制限超過'}]},
+  { n:3,  tl:ms(1,30), bands:[{to:ms(0,20),pts:6,label:'20秒以内'},{to:ms(0,35),pts:5,label:'21〜35秒'},{to:ms(1,30),pts:4,label:'36秒〜1分30秒'},{to:Infinity,pts:0,label:'制限超過'}]},
+  { n:4,  tl:ms(2,0),  bands:[{to:ms(0,30),pts:6,label:'30秒以内'},{to:ms(1,10),pts:5,label:'31秒〜1分10秒'},{to:ms(2,0),pts:4,label:'1分11秒〜2分'},{to:Infinity,pts:0,label:'制限超過'}]},
+  { n:5,  tl:ms(2,0),  bands:[{to:ms(0,35),pts:7,label:'35秒以内'},{to:ms(1,5),pts:6,label:'36秒〜1分5秒'},{to:ms(2,0),pts:5,label:'1分6秒〜2分'},{to:Infinity,pts:0,label:'制限超過'}]},
+  { n:6,  tl:ms(2,0),  bands:[{to:ms(0,35),pts:7,label:'35秒以内'},{to:ms(1,0),pts:6,label:'36秒〜1分'},{to:ms(2,0),pts:5,label:'1分1秒〜2分'},{to:Infinity,pts:0,label:'制限超過'}]},
+  { n:7,  tl:ms(2,0),  bands:[{to:ms(0,40),pts:7,label:'40秒以内'},{to:ms(1,10),pts:6,label:'41秒〜1分10秒'},{to:ms(2,0),pts:5,label:'1分11秒〜2分'},{to:Infinity,pts:0,label:'制限超過'}]},
+  { n:8,  tl:ms(2,0),  bands:[{to:ms(0,40),pts:8,label:'40秒以内'},{to:ms(0,55),pts:7,label:'41〜55秒'},{to:ms(2,0),pts:6,label:'56秒〜2分'},{to:Infinity,pts:0,label:'制限超過'}]},
+  { n:9,  tl:ms(2,0),  bands:[{to:ms(0,55),pts:9,label:'55秒以内'},{to:ms(1,10),pts:8,label:'56秒〜1分10秒'},{to:ms(2,0),pts:7,label:'1分11秒〜2分'},{to:Infinity,pts:0,label:'制限超過'}]},
+  { n:10, tl:ms(3,0),  bands:[{to:ms(1,55),pts:9,label:'1分55秒以内'},{to:ms(2,10),pts:8,label:'1分56秒〜2分10秒'},{to:ms(3,0),pts:7,label:'2分11秒〜3分'},{to:Infinity,pts:0,label:'制限超過'}]},
+  { n:11, tl:ms(3,30), bands:[{to:ms(1,45),pts:8,label:'1分45秒以内'},{to:ms(2,30),pts:7,label:'1分46秒〜2分30秒'},{to:ms(3,30),pts:6,label:'2分31秒〜3分30秒'},{to:Infinity,pts:0,label:'制限超過'}]},
+  { n:12, tl:ms(3,30), bands:[{to:ms(2,25),pts:9,label:'2分25秒以内'},{to:ms(2,40),pts:8,label:'2分26秒〜2分40秒'},{to:ms(3,30),pts:7,label:'2分41秒〜3分30秒'},{to:Infinity,pts:0,label:'制限超過'}]},
+  { n:13, tl:ms(3,30), bands:[{to:ms(2,20),pts:9,label:'2分20秒以内'},{to:ms(2,33),pts:8,label:'2分21秒〜2分33秒'},{to:ms(3,30),pts:7,label:'2分34秒〜3分30秒'},{to:Infinity,pts:0,label:'制限超過'}]},
+  { n:14, tl:ms(4,0),  bands:[{to:ms(2,25),pts:9,label:'2分25秒以内'},{to:ms(2,40),pts:8,label:'2分26秒〜2分40秒'},{to:ms(4,0),pts:7,label:'2分41秒〜4分'},{to:Infinity,pts:0,label:'制限超過'}]},
+  { n:15, tl:ms(4,0),  bands:[{to:ms(2,40),pts:9,label:'2分40秒以内'},{to:ms(3,0),pts:8,label:'2分41秒〜3分'},{to:ms(4,0),pts:7,label:'3分1秒〜4分'},{to:Infinity,pts:0,label:'制限超過'}]},
+  { n:16, tl:ms(4,0),  bands:[{to:ms(2,40),pts:10,label:'2分40秒以内'},{to:ms(3,5),pts:9,label:'2分41秒〜3分5秒'},{to:ms(4,0),pts:8,label:'3分6秒〜4分'},{to:Infinity,pts:0,label:'制限超過'}]},
+  { n:17, tl:ms(4,0),  bands:[{to:ms(2,40),pts:10,label:'2分40秒以内'},{to:ms(2,55),pts:9,label:'2分41秒〜2分55秒'},{to:ms(4,0),pts:8,label:'2分56秒〜4分'},{to:Infinity,pts:0,label:'制限超過'}]},
+];
+
+const NORMS = [
+  { label:'60〜64歳', ageMin:60, ageMax:64, hN:31,  hM:50.0, hSD:29.44, eN:34,  eM:106.0, eSD:30.1  },
+  { label:'65〜69歳', ageMin:65, ageMax:69, hN:63,  hM:48.6, hSD:37.13, eN:49,  eM:96.9,  eSD:29.7  },
+  { label:'70〜74歳', ageMin:70, ageMax:74, hN:97,  hM:35.6, hSD:23.19, eN:58,  eM:86.2,  eSD:31.9  },
+  { label:'75〜79歳', ageMin:75, ageMax:79, hN:57,  hM:26.5, hSD:17.84, eN:37,  eM:67.8,  eSD:28.45 },
+  { label:'80歳〜',   ageMin:80, ageMax:120,hN:29,  hM:26.1, hSD:15.99, eN:11,  eM:59.4,  eSD:19.51 },
+];
+
+// --- state ---
+let cur = 0;
+let sw = PROBS.map(() => ({ elapsed: 0, running: false, startAt: null }));
+let scores = PROBS.map(() => null);
+let ticker = null;
+let patientName = '';
+let patientInitial = '';
+let patientAge = '';
+// 中断インデックス（2連続0点で終了した問題番号）
+let stopIdx = null;
+
+const LS_KEY = 'kohs_history';
+
+// ===== スタート画面 =====
+function startExam() {
+  const initial = document.getElementById('inp-initial').value.trim();
+  const age     = document.getElementById('inp-age-start').value.trim();
+
+  if (!initial) {
+    alert('イニシャルを入力してください');
+    return;
+  }
+  patientName    = '';
+  patientInitial = initial;
+  patientAge     = age;
+
+  // リセット
+  cur = 0; stopIdx = null;
+  sw = PROBS.map(() => ({ elapsed: 0, running: false, startAt: null }));
+  scores = PROBS.map(() => null);
+  clearInterval(ticker); ticker = null;
+
+  // 年齢を集計画面にも反映
+  document.getElementById('age-input').value = age;
+
+  showScreen('main');
+  render();
+}
+
+function showScreen(name) {
+  document.getElementById('screen-start').style.display  = name === 'start'  ? 'block' : 'none';
+  document.getElementById('screen-main').style.display   = name === 'main'   ? 'block' : 'none';
+  document.getElementById('screen-result').style.display = name === 'result' ? 'block' : 'none';
+}
+
+function goToResult() {
+  stopSW();
+  showScreen('result');
+  renderResult();
+}
+function goToMain() { showScreen('main'); render(); }
+function goToStart() {
+  stopSW();
+  showScreen('start');
+  renderStartHistory();
+}
+
+function stopSW() {
+  if (sw[cur] && sw[cur].running) {
+    clearInterval(ticker);
+    sw[cur].elapsed = Date.now() - sw[cur].startAt;
+    sw[cur].running = false;
+    ticker = null;
+  }
+}
+
+// ===== 患者表示名 =====
+function patientLabel() {
+  const parts = [];
+  if (patientInitial) parts.push(patientInitial);
+  if (patientAge)     parts.push(patientAge + '歳');
+  return parts.join('　');
+}
+
+// ===== 2連続0点チェック =====
+function checkDoubleZero(afterIdx) {
+  // afterIdx: 今セットした問題インデックス
+  if (afterIdx < 1) return false;
+  return scores[afterIdx] === 0 && scores[afterIdx - 1] === 0;
+}
+
+// ===== メイン画面 render =====
+function renderNav() {
+  const nav = document.getElementById('prob-nav');
+  nav.innerHTML = '';
+  const limit = stopIdx !== null ? stopIdx + 1 : PROBS.length;
+  PROBS.forEach((p, i) => {
+    if (i >= limit) return;
+    const b = document.createElement('button');
+    b.className = 'pnav-btn' + (i === cur ? ' cur' : scores[i] !== null ? ' done' : '');
+    b.textContent = p.n;
+    b.onclick = () => { cur = i; render(); };
+    nav.appendChild(b);
+  });
+}
+
+function renderSW() {
+  const s = sw[cur], p = PROBS[cur];
+  const el = document.getElementById('sw-disp');
+  el.textContent = fmtT(s.elapsed);
+  el.className = 'sw-display' + (s.running ? ' running' : '') + (s.elapsed / 1000 > p.tl ? ' over' : '');
+  const btn = document.getElementById('sw-main-btn');
+  if (s.running) {
+    btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg><span>停止</span>`;
+  } else {
+    btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5,3 19,12 5,21"/></svg><span>${s.elapsed > 0 ? '再開' : '開始'}</span>`;
+  }
+}
+
+function renderScoreGuide() {
+  const p = PROBS[cur];
+  const secs = Math.floor(sw[cur].elapsed / 1000);
+  const elapsed = sw[cur].elapsed;
+  document.getElementById('score-rows').innerHTML = p.bands.map((b, idx) => {
+    const prevTo = idx === 0 ? -1 : p.bands[idx-1].to;
+    const isActive = elapsed > 0 && secs <= b.to && secs > prevTo;
+    const isOver = b.to === Infinity && secs > p.tl;
+    const active = isActive || isOver;
+    return `<div class="score-row${active ? ' active-range' : ''}">
+      <div class="score-row-pts">${b.pts}</div>
+      <div class="score-row-label">${b.label}</div>
+      ${active ? '<div class="score-row-badge">今ここ</div>' : ''}
+    </div>`;
+  }).join('');
+}
+
+function renderScoreGrid() {
+  const p = PROBS[cur];
+  const g = document.getElementById('score-grid');
+  const validScores = [...new Set(p.bands.map(b => b.pts))].sort((a, b) => b - a);
+  const cols = Math.min(validScores.length, 6);
+  g.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+  g.innerHTML = validScores
+    .map(s => `<button class="sc-btn${scores[cur] === s ? ' sel' : ''}" onclick="setScore(${s})">${s}</button>`)
+    .join('');
+}
+
+function renderTotal() {
+  const t = getTotal();
+  document.getElementById('total-disp').textContent = t;
+  document.getElementById('total-disp2').textContent = t;
+}
+
+function renderProbInfo() {
+  const p = PROBS[cur];
+  document.getElementById('prob-num-label').textContent = p.n;
+  document.getElementById('prob-big').textContent = p.n;
+  document.getElementById('prob-sub').textContent = `制限 ${fmtLim(p.tl)}　最高 ${Math.max(...p.bands.map(b=>b.pts))}点`;
+
+  // patient
+  document.getElementById('patient-disp').textContent = patientLabel();
+
+  // next btn
+  const nb = document.getElementById('btn-next');
+  const isLast = stopIdx !== null ? cur === stopIdx : cur === PROBS.length - 1;
+  nb.innerHTML = isLast
+    ? `集計へ <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20,6 9,17 4,12"/></svg>`
+    : `次へ <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9,18 15,12 9,6"/></svg>`;
+  document.getElementById('btn-prev').style.visibility = cur === 0 ? 'hidden' : 'visible';
+}
+
+function renderZeroWarn() {
+  const warn = document.getElementById('zero-warn');
+  if (stopIdx !== null && cur === stopIdx) {
+    warn.classList.add('show');
+  } else {
+    warn.classList.remove('show');
+  }
+}
+
+function render() {
+  renderNav(); renderSW(); renderScoreGuide();
+  renderScoreGrid(); renderTotal(); renderProbInfo(); renderZeroWarn();
+}
+
+// ===== 集計結果画面 render =====
+function renderResult() {
+  const total = getTotal();
+  document.getElementById('result-score-big').textContent = total;
+  document.getElementById('result-patient-sub').textContent = patientLabel() || '（受検者名未入力）';
+
+  // 問題別
+  const limit = stopIdx !== null ? stopIdx + 1 : PROBS.length;
+  const cells = PROBS.map((p, i) => {
+    if (i >= limit) {
+      return `<div class="ps-cell skip"><div class="ps-num">${p.n}</div><div class="ps-val" style="color:var(--text3)">—</div></div>`;
+    }
+    const v = scores[i];
+    const cls = v === 0 ? ' zero' : '';
+    return `<div class="ps-cell${cls}"><div class="ps-num">${p.n}</div><div class="ps-val">${v !== null ? v : '?'}</div></div>`;
+  }).join('');
+  document.getElementById('prob-summary').innerHTML = cells;
+
+  // 年齢は start 画面で入力した値を流用
+  if (patientAge && !document.getElementById('age-input').value) {
+    document.getElementById('age-input').value = patientAge;
+  }
+  renderNorm();
+  renderResultHistory();
+}
+
+function renderNorm() {
+  const ageVal = document.getElementById('age-input').value;
+  const age    = ageVal ? parseInt(ageVal) : null;
+  const group  = age !== null ? NORMS.find(n => age >= n.ageMin && age <= n.ageMax) : null;
+  const total  = getTotal();
+
+  document.getElementById('norm-tbody').innerHTML =
+    NORMS.map(n => {
+      const isHL = group && n === group;
+      return `<tr class="${isHL ? 'highlight' : ''}">
+        <td class="left">${n.label}</td>
+        <td>${n.hN}</td>
+        <td>${n.hM.toFixed(1)}±${n.hSD.toFixed(2)}</td>
+        <td>${n.eN}</td>
+        <td>${n.eM.toFixed(1)}±${n.eSD.toFixed(2)}</td>
+      </tr>`;
+    }).join('') +
+    `<tr><td class="left" style="color:var(--text3);font-size:11px">全体</td>
+      <td style="color:var(--text3);font-size:11px">277</td>
+      <td style="color:var(--text3);font-size:11px">37.2±27.61</td>
+      <td style="color:var(--text3);font-size:11px">189</td>
+      <td style="color:var(--text3);font-size:11px">87.3±32.91</td>
+    </tr>`;
+
+  const res = document.getElementById('norm-result');
+  if (!group) {
+    res.className = 'norm-result' + (age !== null ? ' show no-group' : '');
+    res.innerHTML = age !== null ? '60〜80代以外の年齢は規準データの対象外です。' : '';
+    return;
+  }
+  const diffH = (total - group.hM).toFixed(1);
+  const signH = total >= group.hM ? '+' : '';
+  let cls, msg;
+  if (total >= group.eM - group.eSD) {
+    cls = 'above';
+    msg = `<strong>優秀群の平均内（${group.eM.toFixed(1)}±${group.eSD.toFixed(2)}）</strong><br>合計 ${total}点　健康群平均との差：${signH}${diffH}点`;
+  } else if (total >= group.hM - group.hSD) {
+    cls = 'within';
+    msg = `<strong>健康群の平均±1SD内（${group.hM.toFixed(1)}±${group.hSD.toFixed(2)}）</strong><br>合計 ${total}点　健康群平均との差：${signH}${diffH}点`;
+  } else {
+    cls = 'below';
+    msg = `<strong>健康群の平均−1SD を下回る（${group.hM.toFixed(1)}±${group.hSD.toFixed(2)}）</strong><br>合計 ${total}点　健康群平均との差：${signH}${diffH}点`;
+  }
+  res.className = `norm-result show ${cls}`;
+  res.innerHTML = msg;
+}
+
+// ===== 操作 =====
+function swToggle() {
+  const s = sw[cur];
+  if (s.running) {
+    clearInterval(ticker);
+    s.elapsed = Date.now() - s.startAt;
+    s.running = false; ticker = null;
+    render();
+  } else {
+    s.startAt = Date.now() - s.elapsed;
+    s.running = true;
+    ticker = setInterval(() => {
+      sw[cur].elapsed = Date.now() - sw[cur].startAt;
+      renderSW(); renderScoreGuide();
+    }, 200);
+    renderSW();
+  }
+}
+
+function swReset() {
+  clearInterval(ticker); ticker = null;
+  sw[cur] = { elapsed: 0, running: false, startAt: null };
+  render();
+}
+
+function setScore(v) {
+  scores[cur] = v;
+  // 2連続0点チェック
+  if (checkDoubleZero(cur)) {
+    stopIdx = cur;
+  } else {
+    // ストップ条件が解除された場合（前問を変更した場合）
+    if (stopIdx !== null && cur <= stopIdx) {
+      // 再チェック
+      let found = false;
+      for (let i = 1; i < PROBS.length; i++) {
+        if (scores[i] === 0 && scores[i-1] === 0) { stopIdx = i; found = true; break; }
+      }
+      if (!found) stopIdx = null;
+    }
+  }
+  renderScoreGrid(); renderTotal(); renderNav(); renderZeroWarn(); renderProbInfo();
+}
+
+function mv(d) {
+  stopSW();
+  cur = Math.max(0, Math.min((stopIdx !== null ? stopIdx : PROBS.length - 1), cur + d));
+  render();
+}
+
+function mvNext() {
+  stopSW();
+  const limit = stopIdx !== null ? stopIdx : PROBS.length - 1;
+  if (cur >= limit) {
+    // 最終問題 → 集計へ
+    goToResult();
+  } else {
+    cur = Math.min(limit, cur + 1);
+    render();
+  }
+}
+
+// ===== localStorage =====
+function saveToStorage() {
+  const ageVal = document.getElementById('age-input').value;
+  const record = {
+    date: new Date().toLocaleString('ja-JP'),
+    name: patientName,
+    initial: patientInitial,
+    age: ageVal || patientAge || '',
+    scores: scores.slice(),
+    stopIdx: stopIdx,
+    total: getTotal(),
+  };
+  const history = loadHistory();
+  history.unshift(record);
+  localStorage.setItem(LS_KEY, JSON.stringify(history.slice(0, 30)));
+  renderResultHistory();
+  renderStartHistory();
+  const btn = document.getElementById('save-btn');
+  const orig = btn.textContent;
+  btn.textContent = '✓ 保存済み';
+  btn.style.background = 'var(--green)';
+  setTimeout(() => { btn.textContent = orig; btn.style.background = ''; }, 1800);
+}
+
+function loadHistory() {
+  try { return JSON.parse(localStorage.getItem(LS_KEY) || '[]'); } catch { return []; }
+}
+
+function loadRecord(idx) {
+  const history = loadHistory();
+  const rec = history[idx];
+  if (!rec) return;
+  patientName    = rec.name    || '';
+  patientInitial = rec.initial || '';
+  patientAge     = rec.age     || '';
+  scores  = rec.scores.map(s => s);
+  stopIdx = rec.stopIdx ?? null;
+  document.getElementById('age-input').value = rec.age || '';
+  document.getElementById('inp-initial').value = patientInitial;
+  document.getElementById('inp-age-start').value = patientAge;
+  cur = 0;
+  showScreen('result');
+  renderResult();
+}
+
+function deleteRecord(idx) {
+  const history = loadHistory();
+  history.splice(idx, 1);
+  localStorage.setItem(LS_KEY, JSON.stringify(history));
+  renderResultHistory();
+  renderStartHistory();
+}
+
+function histHTML(history, onLoad, onDel) {
+  if (!history.length) {
+    return '<div style="font-size:13px;color:var(--text3);text-align:center;padding:0.5rem 0">保存された記録はありません</div>';
+  }
+  return history.map((r, i) => {
+    const label = [r.name, r.initial ? '（'+r.initial+'）' : '', r.age ? r.age+'歳' : ''].filter(Boolean).join(' ') || '（名前なし）';
+    return `
+    <div class="hist-row" onclick="${onLoad}(${i})">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:600;color:var(--text)">${r.date}　${label}</div>
+        <div style="font-size:12px;color:var(--text2);margin-top:2px">合計 <strong>${r.total}点</strong>　各問：${r.scores.map(s => s !== null ? s : '−').join(' / ')}</div>
+      </div>
+      <button class="del-btn" onclick="event.stopPropagation();${onDel}(${i})">削除</button>
+    </div>`;
+  }).join('');
+}
+
+function renderStartHistory() {
+  document.getElementById('start-hist-wrap').innerHTML = histHTML(loadHistory(), 'loadRecord', 'deleteRecord');
+}
+function renderResultHistory() {
+  document.getElementById('result-hist-wrap').innerHTML = histHTML(loadHistory(), 'loadRecord', 'deleteRecord');
+}
+
+// ===== util =====
+function fmtT(ms) {
+  const s = Math.floor(ms / 1000);
+  return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
+}
+function fmtLim(sec) {
+  return sec < 60 ? sec + '秒' : Math.floor(sec/60) + '分' + (sec%60 > 0 ? sec%60 + '秒' : '');
+}
+function getTotal() { return scores.reduce((a, s) => a + (s ?? 0), 0); }
+
+// init
+renderStartHistory();
+</script>
+</body>
+</html>
