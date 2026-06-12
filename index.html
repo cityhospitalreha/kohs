@@ -2,8 +2,24 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>KOHS 立方体テスト</title>
+
+<!-- ===== PWA設定 ===== -->
+<!-- アプリの基本情報（名前・色・アイコン）を記載した設定ファイル -->
+<link rel="manifest" href="manifest.json">
+<!-- iPadのステータスバー・タスク切替画面などに表示される色 -->
+<meta name="theme-color" content="#1a1a18">
+<!-- ホーム画面に追加したときに使われるアイコン（iPad/iPhone用） -->
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<!-- ブラウザのタブに表示されるアイコン -->
+<link rel="icon" type="image/png" href="icons/favicon-32.png">
+<!-- ホーム画面から開いたとき、ブラウザのアドレスバーを隠してアプリのように表示 -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<!-- ステータスバーの見た目（黒文字／白文字）の指定 -->
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<!-- ホーム画面に追加したときに表示されるアプリ名 -->
+<meta name="apple-mobile-web-app-title" content="KOHS">
 <style>
   :root {
     --bg: #f7f6f3; --surface: #ffffff; --surface2: #f0efe9;
@@ -793,6 +809,16 @@ function getTotal() { return scores.reduce((a, s) => a + (s ?? 0), 0); }
 
 // init
 renderStartHistory();
+
+// ===== PWA: サービスワーカーの登録 =====
+// ブラウザがサービスワーカーに対応している場合、
+// service-worker.js を登録してオフライン対応を有効にする
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./service-worker.js')
+      .catch((err) => console.log('Service Worker 登録失敗:', err));
+  });
+}
 </script>
 </body>
 </html>
