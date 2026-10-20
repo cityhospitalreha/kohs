@@ -193,15 +193,40 @@
   .ps-cell.zero { background: var(--red-bg); }
   .ps-cell.skip { background: var(--surface2); opacity: 0.5; }
 
-  .age-row  { display: flex; align-items: center; gap: 10px; margin-bottom: 1rem; }
-  .age-row label { font-size: 13px; color: var(--text2); font-weight: 600; white-space: nowrap; }
-  .age-input {
-    width: 80px; padding: 8px 10px; font-size: 16px; font-weight: 600;
+  /* ===== 年代選択ボタン（チップ） ===== */
+  .band-chips { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 1rem; }
+  .band-chip {
+    padding: 12px 4px; font-size: 15px; font-weight: 700; text-align: center;
     border: 1.5px solid var(--border2); border-radius: var(--radius);
-    background: var(--surface); color: var(--text); text-align: center;
+    background: var(--surface); color: var(--text2); cursor: pointer; transition: all 0.12s;
   }
-  .age-input:focus { outline: 2px solid var(--accent); border-color: var(--accent); }
-  .age-hint { font-size: 12px; color: var(--text3); }
+  .band-chip:hover { background: var(--surface2); color: var(--text); }
+  .band-chip.sel { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .band-chip.out { font-size: 13px; font-weight: 600; }
+
+  /* ===== 位置バー（どこに当たるか） ===== */
+  .pos-wrap { margin-bottom: 0.875rem; display: none; }
+  .pos-wrap.show { display: block; }
+  .pos-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .pos-name { width: 52px; font-size: 11px; font-weight: 700; color: var(--text2); flex-shrink: 0; }
+  .pos-track { position: relative; flex: 1; height: 26px; background: var(--surface2); border-radius: 6px; }
+  .pos-range { position: absolute; top: 0; bottom: 0; border-radius: 6px; }
+  .pos-range.h { background: rgba(138,90,0,0.22); }
+  .pos-range.e { background: rgba(26,107,58,0.22); }
+  .pos-mean { position: absolute; top: 3px; bottom: 3px; width: 2px; margin-left: -1px; background: var(--text2); }
+  .pos-marker { position: absolute; top: -4px; bottom: -4px; width: 3px; margin-left: -1.5px; background: var(--red); border-radius: 2px; }
+  .pos-marker-label {
+    position: absolute; top: -22px; transform: translateX(-50%);
+    font-size: 11px; font-weight: 700; color: #fff; background: var(--red);
+    border-radius: 4px; padding: 1px 6px; white-space: nowrap;
+  }
+  .pos-scale { display: flex; justify-content: space-between; margin-left: 60px; font-size: 10px; color: var(--text3); }
+  .pos-legend { font-size: 11px; color: var(--text3); margin-top: 6px; line-height: 1.6; }
+  .z-row { display: flex; gap: 8px; margin-top: 10px; }
+  .z-box { flex: 1; background: var(--surface2); border-radius: 8px; padding: 8px 10px; text-align: center; }
+  .z-box-label { font-size: 11px; color: var(--text3); font-weight: 600; }
+  .z-box-val { font-size: 18px; font-weight: 700; }
+  .norm-table tbody tr { cursor: pointer; }
 
   .norm-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 0.875rem; }
   .norm-table th { font-size: 11px; font-weight: 700; color: var(--text3); text-align: center; padding: 5px 6px; border-bottom: 1.5px solid var(--border2); }
@@ -243,16 +268,18 @@
   <div id="screen-start">
     <div class="start-header">
       <div class="start-title">KOHS 立方体テスト</div>
-      <div class="start-sub">イニシャルを入力して検査を開始してください</div>
+      <div class="start-sub">年代を選んで検査を開始してください</div>
     </div>
 
     <div class="field-card">
-      <div class="field-label">受検者</div>
-      <div class="field-row">
-        <input class="field-input" id="inp-initial" type="text" placeholder="イニシャル（例：YT）" style="max-width:160px">
-        <input class="field-input" id="inp-age-start" type="number" min="1" max="120" placeholder="年齢（歳）">
-      </div>
-      <div class="field-hint">イニシャルを入力して開始してください</div>
+      <div class="field-label">メモ</div>
+      <input class="field-input" id="inp-memo" type="text" maxlength="20">
+    </div>
+
+    <div class="field-card">
+      <div class="field-label">年代（規準データの区分）</div>
+      <div class="band-chips" id="band-chips-start" style="margin-bottom:0"></div>
+      <div class="field-hint">年齢は入力せず、該当する年代をタップ（もう一度タップで解除）。集計画面でも変更できます</div>
     </div>
 
     <button class="start-btn" onclick="startExam()">検査を開始する →</button>
@@ -346,11 +373,8 @@
 
     <div class="card">
       <div class="card-label">年齢別規準との比較（柄沢昭秀 他, 1980）</div>
-      <div class="age-row">
-        <label for="age-input">年齢</label>
-        <input class="age-input" id="age-input" type="number" min="60" max="120" placeholder="例: 72" oninput="renderNorm()">
-        <span class="age-hint">歳（60〜80代に対応）</span>
-      </div>
+      <div class="band-chips" id="band-chips-result"></div>
+      <div class="pos-wrap" id="pos-wrap"></div>
       <table class="norm-table">
         <thead>
           <tr>
@@ -410,14 +434,34 @@ const NORMS = [
   { label:'80歳〜',   ageMin:80, ageMax:120,hN:29,  hM:26.1, hSD:15.99, eN:11,  eM:59.4,  eSD:19.51 },
 ];
 
+// ===== 年代の選択肢 =====
+// key：内部で使う識別子 / label：ボタンの表示 / norm：対応する規準データ（なければ対象外）
+const BAND_OPTS = [
+  { key:'u60', label:'〜59歳', norm:null },
+  ...NORMS.map((n, i) => ({ key:'n' + i, label:n.label, norm:n })),
+];
+// 満点（全17問の最高点の合計）＝位置バーの右端
+const MAX_TOTAL = PROBS.reduce((a, p) => a + Math.max(...p.bands.map(b => b.pts)), 0);
+
+function bandOpt(key)   { return BAND_OPTS.find(o => o.key === key) || null; }
+function bandLabel(key) { const o = bandOpt(key); return o ? o.label : ''; }
+// 旧バージョンで保存した「数字の年齢」を年代キーに変換（過去記録の互換用）
+function ageToBandKey(age) {
+  const a = parseInt(age);
+  if (isNaN(a)) return '';
+  if (a < 60) return 'u60';
+  const i = NORMS.findIndex(n => a >= n.ageMin && a <= n.ageMax);
+  return i >= 0 ? 'n' + i : '';
+}
+
 // --- state ---
 let cur = 0;
 let sw = PROBS.map(() => ({ elapsed: 0, running: false, startAt: null }));
 let scores = PROBS.map(() => null);
 let ticker = null;
-let patientName = '';
-let patientInitial = '';
-let patientAge = '';
+let memo = '';          // 目印（自由記載・空欄OK）
+let examId = 0;         // 内部用の検査ID（開始時刻の数字。画面には出さない）
+let patientBand = '';   // 選んだ年代のkey（例：'n2' = 70〜74歳）
 // 中断インデックス（2連続0点で終了した問題番号）
 let stopIdx = null;
 
@@ -425,25 +469,15 @@ const LS_KEY = 'kohs_history';
 
 // ===== スタート画面 =====
 function startExam() {
-  const initial = document.getElementById('inp-initial').value.trim();
-  const age     = document.getElementById('inp-age-start').value.trim();
-
-  if (!initial) {
-    alert('イニシャルを入力してください');
-    return;
-  }
-  patientName    = '';
-  patientInitial = initial;
-  patientAge     = age;
+  memo   = document.getElementById('inp-memo').value.trim();
+  examId = Date.now();   // 1970年からのミリ秒。毎回ちがう数字になる
+  // patientBand はボタンを押した時点で既に入っている
 
   // リセット
   cur = 0; stopIdx = null;
   sw = PROBS.map(() => ({ elapsed: 0, running: false, startAt: null }));
   scores = PROBS.map(() => null);
   clearInterval(ticker); ticker = null;
-
-  // 年齢を集計画面にも反映
-  document.getElementById('age-input').value = age;
 
   showScreen('main');
   render();
@@ -464,6 +498,7 @@ function goToMain() { showScreen('main'); render(); }
 function goToStart() {
   stopSW();
   showScreen('start');
+  document.getElementById('inp-memo').value = '';   // 次の検査用に空にする
   renderStartHistory();
 }
 
@@ -479,9 +514,29 @@ function stopSW() {
 // ===== 患者表示名 =====
 function patientLabel() {
   const parts = [];
-  if (patientInitial) parts.push(patientInitial);
-  if (patientAge)     parts.push(patientAge + '歳');
+  if (memo)        parts.push(memo);
+  if (patientBand) parts.push(bandLabel(patientBand));
   return parts.join('　');
+}
+
+// ===== 年代ボタン =====
+function renderBandChips() {
+  ['band-chips-start', 'band-chips-result'].forEach(id => {
+    document.getElementById(id).innerHTML = BAND_OPTS.map(o =>
+      `<button class="band-chip${o.norm ? '' : ' out'}${patientBand === o.key ? ' sel' : ''}"
+               onclick="selectBand('${o.key}')">${o.label}</button>`
+    ).join('');
+  });
+}
+function selectBand(key) {
+  // 同じボタンをもう一度押したら解除
+  patientBand = (patientBand === key) ? '' : key;
+  renderBandChips();
+  // 集計画面を表示中なら比較結果も更新
+  if (document.getElementById('screen-result').style.display === 'block') {
+    document.getElementById('result-patient-sub').textContent = patientLabel() || '';
+    renderNorm();
+  }
 }
 
 // ===== 2連続0点チェック =====
@@ -589,7 +644,7 @@ function render() {
 function renderResult() {
   const total = getTotal();
   document.getElementById('result-score-big').textContent = total;
-  document.getElementById('result-patient-sub').textContent = patientLabel() || '（受検者名未入力）';
+  document.getElementById('result-patient-sub').textContent = patientLabel() || '';
 
   // 問題別
   const limit = stopIdx !== null ? stopIdx + 1 : PROBS.length;
@@ -603,24 +658,21 @@ function renderResult() {
   }).join('');
   document.getElementById('prob-summary').innerHTML = cells;
 
-  // 年齢は start 画面で入力した値を流用
-  if (patientAge && !document.getElementById('age-input').value) {
-    document.getElementById('age-input').value = patientAge;
-  }
+  renderBandChips();
   renderNorm();
   renderResultHistory();
 }
 
 function renderNorm() {
-  const ageVal = document.getElementById('age-input').value;
-  const age    = ageVal ? parseInt(ageVal) : null;
-  const group  = age !== null ? NORMS.find(n => age >= n.ageMin && age <= n.ageMax) : null;
-  const total  = getTotal();
+  const opt   = bandOpt(patientBand);
+  const group = opt ? opt.norm : null;
+  const total = getTotal();
 
+  // 表の行をタップしてもその年代を選べる
   document.getElementById('norm-tbody').innerHTML =
-    NORMS.map(n => {
+    NORMS.map((n, i) => {
       const isHL = group && n === group;
-      return `<tr class="${isHL ? 'highlight' : ''}">
+      return `<tr class="${isHL ? 'highlight' : ''}" onclick="selectBand('n${i}')">
         <td class="left">${n.label}</td>
         <td>${n.hN}</td>
         <td>${n.hM.toFixed(1)}±${n.hSD.toFixed(2)}</td>
@@ -636,11 +688,17 @@ function renderNorm() {
     </tr>`;
 
   const res = document.getElementById('norm-result');
+  const pos = document.getElementById('pos-wrap');
   if (!group) {
-    res.className = 'norm-result' + (age !== null ? ' show no-group' : '');
-    res.innerHTML = age !== null ? '60〜80代以外の年齢は規準データの対象外です。' : '';
+    pos.className = 'pos-wrap';
+    pos.innerHTML = '';
+    res.className = 'norm-result show no-group';
+    res.innerHTML = opt
+      ? '60歳未満は規準データ（60歳以上）の対象外です。'
+      : '年代を選ぶと、規準データ上のどの位置に当たるかを表示します。';
     return;
   }
+  renderPosition(group, total);
   const diffH = (total - group.hM).toFixed(1);
   const signH = total >= group.hM ? '+' : '';
   let cls, msg;
@@ -656,6 +714,49 @@ function renderNorm() {
   }
   res.className = `norm-result show ${cls}`;
   res.innerHTML = msg;
+}
+
+// ===== 位置バー：選んだ年代の分布の中で、得点がどこに当たるか =====
+function renderPosition(g, total) {
+  // 点数 → バー上の％位置（0点=左端、満点=右端。はみ出しは端で止める）
+  const pct = v => Math.max(0, Math.min(100, v / MAX_TOTAL * 100));
+  // 平均±1SDの帯を描く
+  const rangeHTML = (m, sd, cls) => {
+    const l = pct(m - sd), r = pct(m + sd);
+    return `<div class="pos-range ${cls}" style="left:${l}%;width:${r - l}%"></div>
+            <div class="pos-mean" style="left:${pct(m)}%"></div>`;
+  };
+  // z値：平均から標準偏差いくつ分離れているか
+  const zH = (total - g.hM) / g.hSD;
+  const zE = (total - g.eM) / g.eSD;
+  const fmtZ = z => (z >= 0 ? '+' : '') + z.toFixed(2);
+
+  const el = document.getElementById('pos-wrap');
+  el.className = 'pos-wrap show';
+  el.innerHTML = `
+    <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:26px">${g.label} の中での位置</div>
+    <div class="pos-row">
+      <div class="pos-name">健康群</div>
+      <div class="pos-track">
+        ${rangeHTML(g.hM, g.hSD, 'h')}
+        <div class="pos-marker" style="left:${pct(total)}%">
+          <div class="pos-marker-label">${total}点</div>
+        </div>
+      </div>
+    </div>
+    <div class="pos-row">
+      <div class="pos-name">優秀群</div>
+      <div class="pos-track">
+        ${rangeHTML(g.eM, g.eSD, 'e')}
+        <div class="pos-marker" style="left:${pct(total)}%"></div>
+      </div>
+    </div>
+    <div class="pos-scale"><span>0</span><span>${Math.round(MAX_TOTAL/2)}</span><span>${MAX_TOTAL}点</span></div>
+    <div class="pos-legend">色の帯＝平均±1SD　細い線＝平均　赤線＝今回の得点</div>
+    <div class="z-row">
+      <div class="z-box"><div class="z-box-label">健康群でのz値</div><div class="z-box-val">${fmtZ(zH)}</div></div>
+      <div class="z-box"><div class="z-box-label">優秀群でのz値</div><div class="z-box-val">${fmtZ(zE)}</div></div>
+    </div>`;
 }
 
 // ===== 操作 =====
@@ -722,17 +823,19 @@ function mvNext() {
 
 // ===== localStorage =====
 function saveToStorage() {
-  const ageVal = document.getElementById('age-input').value;
   const record = {
     date: new Date().toLocaleString('ja-JP'),
-    name: patientName,
-    initial: patientInitial,
-    age: ageVal || patientAge || '',
+    id: examId,                 // 内部用ID（重複保存の防止に使う）
+    memo: memo,                 // 目印（自由記載）
+    band: patientBand,          // 年代のkey（数字の年齢は保存しない）
     scores: scores.slice(),
     stopIdx: stopIdx,
     total: getTotal(),
   };
   const history = loadHistory();
+  // 同じ検査が保存済みなら上書き（保存ボタンを2回押しても重複しない）
+  const dup = history.findIndex(r => r.id && r.id === examId);
+  if (dup >= 0) history.splice(dup, 1);
   history.unshift(record);
   localStorage.setItem(LS_KEY, JSON.stringify(history.slice(0, 30)));
   renderResultHistory();
@@ -752,14 +855,13 @@ function loadRecord(idx) {
   const history = loadHistory();
   const rec = history[idx];
   if (!rec) return;
-  patientName    = rec.name    || '';
-  patientInitial = rec.initial || '';
-  patientAge     = rec.age     || '';
+  memo        = rec.memo || rec.no || '';
+  examId      = rec.id || 0;
+  document.getElementById('inp-memo').value = memo;
+  patientBand = rec.band || '';
   scores  = rec.scores.map(s => s);
   stopIdx = rec.stopIdx ?? null;
-  document.getElementById('age-input').value = rec.age || '';
-  document.getElementById('inp-initial').value = patientInitial;
-  document.getElementById('inp-age-start').value = patientAge;
+  renderBandChips();
   cur = 0;
   showScreen('result');
   renderResult();
@@ -778,7 +880,7 @@ function histHTML(history, onLoad, onDel) {
     return '<div style="font-size:13px;color:var(--text3);text-align:center;padding:0.5rem 0">保存された記録はありません</div>';
   }
   return history.map((r, i) => {
-    const label = [r.name, r.initial ? '（'+r.initial+'）' : '', r.age ? r.age+'歳' : ''].filter(Boolean).join(' ') || '（名前なし）';
+    const label = [esc(r.memo || r.no || ''), bandLabel(r.band)].filter(Boolean).join('　');
     return `
     <div class="hist-row" onclick="${onLoad}(${i})">
       <div style="flex:1;min-width:0">
@@ -805,9 +907,33 @@ function fmtT(ms) {
 function fmtLim(sec) {
   return sec < 60 ? sec + '秒' : Math.floor(sec/60) + '分' + (sec%60 > 0 ? sec%60 + '秒' : '');
 }
+// 自由記載の文字を画面に安全に出す（< や > をそのまま表示する）
+function esc(s) {
+  return String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+}
 function getTotal() { return scores.reduce((a, s) => a + (s ?? 0), 0); }
 
+// ===== 旧記録のお掃除（1回だけでなく毎回起動時に実行。何もなければ何もしない） =====
+// 以前のバージョンで保存した イニシャル(initial)・氏名(name)・年齢(age) を
+// iPadの中から消し、年齢は年代に置き換える
+function scrubOldRecords() {
+  const history = loadHistory();
+  let changed = false;
+  history.forEach(r => {
+    if ('initial' in r || 'name' in r || 'age' in r) {
+      if (!r.band) r.band = ageToBandKey(r.age);
+      delete r.initial; delete r.name; delete r.age;
+      changed = true;
+    }
+  });
+  if (changed) {
+    try { localStorage.setItem(LS_KEY, JSON.stringify(history)); } catch {}
+  }
+}
+
 // init
+scrubOldRecords();
+renderBandChips();
 renderStartHistory();
 
 // ===== PWA: サービスワーカーの登録 =====
